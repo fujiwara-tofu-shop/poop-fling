@@ -77,13 +77,24 @@ export class Game {
   }
 
   private setupCamera(): void {
+    const aspect = window.innerWidth / window.innerHeight;
+    const isPortrait = aspect < 1;
+    
+    // Adjust FOV and position for mobile portrait
+    const fov = isPortrait ? 75 : CAMERA.FOV;
+    const zOffset = isPortrait ? 10 : 0;
+    
     this.camera = new THREE.PerspectiveCamera(
-      CAMERA.FOV,
-      window.innerWidth / window.innerHeight,
+      fov,
+      aspect,
       CAMERA.NEAR,
       CAMERA.FAR
     );
-    this.camera.position.set(CAMERA.POSITION.x, CAMERA.POSITION.y, CAMERA.POSITION.z);
+    this.camera.position.set(
+      CAMERA.POSITION.x,
+      CAMERA.POSITION.y + (isPortrait ? 2 : 0),
+      CAMERA.POSITION.z + zOffset
+    );
     this.camera.lookAt(CAMERA.LOOK_AT.x, CAMERA.LOOK_AT.y, CAMERA.LOOK_AT.z);
   }
 
@@ -344,6 +355,9 @@ export class Game {
     
     this.trajectoryLine = new THREE.Line(geometry, material);
     this.scene.add(this.trajectoryLine);
+    
+    // Show power bar
+    document.getElementById('power-bar')?.classList.add('active');
   }
 
   private onAimUpdate(data: any): void {
@@ -352,10 +366,18 @@ export class Game {
         this.scene.remove(this.trajectoryLine);
         this.trajectoryLine = null;
       }
+      document.getElementById('power-bar')?.classList.remove('active');
       return;
     }
     
     if (!this.trajectoryLine || !data.velocity) return;
+    
+    // Update power bar
+    const powerPercent = Math.min(100, (data.power / GAME.LAUNCH_POWER_MAX) * 100);
+    const powerFill = document.getElementById('power-fill');
+    if (powerFill) {
+      powerFill.style.width = `${powerPercent}%`;
+    }
     
     // Update trajectory preview
     const positions = this.trajectoryLine.geometry.attributes.position;
@@ -390,6 +412,9 @@ export class Game {
       this.scene.remove(this.trajectoryLine);
       this.trajectoryLine = null;
     }
+    
+    // Hide power bar
+    document.getElementById('power-bar')?.classList.remove('active');
     
     // Launch the poop
     this.physics.launchPoop(this.currentPoop.id, data.velocity);
@@ -502,7 +527,17 @@ export class Game {
   }
 
   private onWindowResize(): void {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const aspect = window.innerWidth / window.innerHeight;
+    const isPortrait = aspect < 1;
+    
+    this.camera.aspect = aspect;
+    this.camera.fov = isPortrait ? 75 : CAMERA.FOV;
+    this.camera.position.set(
+      CAMERA.POSITION.x,
+      CAMERA.POSITION.y + (isPortrait ? 2 : 0),
+      CAMERA.POSITION.z + (isPortrait ? 10 : 0)
+    );
+    this.camera.lookAt(CAMERA.LOOK_AT.x, CAMERA.LOOK_AT.y, CAMERA.LOOK_AT.z);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }

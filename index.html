@@ -27,6 +27,12 @@
       background: #1a1a2e;
       font-family: 'Segoe UI', system-ui, sans-serif;
       touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      position: fixed;
+      top: 0;
+      left: 0;
     }
     
     #game-container {
@@ -37,6 +43,8 @@
     
     canvas {
       display: block;
+      width: 100% !important;
+      height: 100% !important;
     }
     
     #ui-overlay {
@@ -50,19 +58,20 @@
     
     #hud {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: env(safe-area-inset-top, 10px);
+      left: 10px;
+      padding-top: 10px;
       color: white;
-      font-size: 18px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      font-size: clamp(14px, 4vw, 18px);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     }
     
     #hud div {
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     
     #level-indicator {
-      font-size: 24px;
+      font-size: clamp(18px, 5vw, 24px);
       font-weight: bold;
     }
     
@@ -76,35 +85,40 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       pointer-events: auto;
+      padding: 20px;
     }
     
     .screen-title {
-      font-size: 48px;
+      font-size: clamp(32px, 10vw, 48px);
       color: #8B4513;
       text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
-      margin-bottom: 20px;
+      margin-bottom: 15px;
+      text-align: center;
     }
     
     .screen-subtitle {
-      font-size: 24px;
+      font-size: clamp(16px, 5vw, 24px);
       color: #fff;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
+      text-align: center;
     }
     
     .btn {
-      padding: 15px 40px;
-      font-size: 24px;
+      padding: clamp(12px, 4vw, 20px) clamp(30px, 10vw, 50px);
+      font-size: clamp(18px, 5vw, 24px);
       background: linear-gradient(180deg, #8B4513 0%, #5D2E0C 100%);
       color: white;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       margin: 10px;
       pointer-events: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
       transition: transform 0.1s;
+      min-width: 150px;
+      -webkit-tap-highlight-color: transparent;
     }
     
     .btn:hover {
@@ -113,6 +127,7 @@
     
     .btn:active {
       transform: scale(0.95);
+      background: linear-gradient(180deg, #6B3310 0%, #4D1E08 100%);
     }
     
     .hidden {
@@ -121,17 +136,48 @@
     
     #aim-indicator {
       position: absolute;
-      bottom: 100px;
+      bottom: max(80px, env(safe-area-inset-bottom, 20px) + 60px);
       left: 50%;
       transform: translateX(-50%);
       color: white;
-      font-size: 16px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      font-size: clamp(14px, 4vw, 18px);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      text-align: center;
+      width: 90%;
+      padding: 10px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
     }
     
     .emoji {
-      font-size: 64px;
-      margin-bottom: 20px;
+      font-size: clamp(48px, 15vw, 72px);
+      margin-bottom: 15px;
+    }
+    
+    /* Power indicator */
+    #power-bar {
+      position: absolute;
+      bottom: max(20px, env(safe-area-inset-bottom, 10px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 300px;
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    
+    #power-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+      transition: width 0.05s;
+    }
+    
+    #power-bar.active {
+      display: block;
     }
   </style>
 </head>
@@ -145,7 +191,11 @@
         <div id="monkeys-display">Monkeys: 3</div>
       </div>
       
-      <div id="aim-indicator" class="hidden">Drag to aim, release to fling!</div>
+      <div id="aim-indicator" class="hidden">👆 Drag anywhere to aim, release to fling!</div>
+      
+      <div id="power-bar">
+        <div id="power-fill"></div>
+      </div>
       
       <div id="menu-screen">
         <div class="emoji">💩🐵</div>
