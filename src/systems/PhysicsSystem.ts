@@ -115,11 +115,15 @@ export class PhysicsSystem {
     const body = new CANNON.Body({
       mass: PHYSICS.BLOCK_MASS,
       material: this.objectMaterial,
-      linearDamping: 0.1,
+      linearDamping: 0.3,
       angularDamping: 0.5,
+      sleepSpeedLimit: 0.1,
+      sleepTimeLimit: 1,
     });
     body.addShape(shape);
     body.position.set(position.x, position.y, position.z);
+    // Start sleeping so structures don't collapse immediately
+    body.sleep();
 
     this.world.addBody(body);
     this.bodies.set(id, { mesh, body, type: 'block', id, health });
@@ -134,11 +138,15 @@ export class PhysicsSystem {
     const body = new CANNON.Body({
       mass: PHYSICS.MONKEY_MASS,
       material: this.objectMaterial,
-      linearDamping: 0.2,
+      linearDamping: 0.3,
       angularDamping: 0.5,
+      sleepSpeedLimit: 0.1,
+      sleepTimeLimit: 1,
     });
     body.addShape(shape);
     body.position.set(position.x, position.y, position.z);
+    // Start sleeping
+    body.sleep();
 
     this.world.addBody(body);
     this.bodies.set(id, { mesh, body, type: 'monkey', id, health: 1 });

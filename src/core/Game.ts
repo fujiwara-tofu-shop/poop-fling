@@ -80,9 +80,8 @@ export class Game {
     const aspect = window.innerWidth / window.innerHeight;
     const isPortrait = aspect < 1;
     
-    // Adjust FOV and position for mobile portrait
-    const fov = isPortrait ? 75 : CAMERA.FOV;
-    const zOffset = isPortrait ? 10 : 0;
+    // For portrait: higher FOV, pull back more
+    const fov = isPortrait ? 65 : CAMERA.FOV;
     
     this.camera = new THREE.PerspectiveCamera(
       fov,
@@ -90,11 +89,13 @@ export class Game {
       CAMERA.NEAR,
       CAMERA.FAR
     );
-    this.camera.position.set(
-      CAMERA.POSITION.x,
-      CAMERA.POSITION.y + (isPortrait ? 2 : 0),
-      CAMERA.POSITION.z + zOffset
-    );
+    
+    // Position camera behind slingshot looking at structures
+    // Portrait needs to pull back more on X
+    const xPos = isPortrait ? CAMERA.POSITION.x - 5 : CAMERA.POSITION.x;
+    const yPos = isPortrait ? CAMERA.POSITION.y + 3 : CAMERA.POSITION.y;
+    
+    this.camera.position.set(xPos, yPos, CAMERA.POSITION.z);
     this.camera.lookAt(CAMERA.LOOK_AT.x, CAMERA.LOOK_AT.y, CAMERA.LOOK_AT.z);
   }
 
@@ -190,6 +191,12 @@ export class Game {
   }
 
   private loadLevel(levelNumber: number): void {
+    // Hide any overlays
+    document.getElementById('level-complete-screen')?.classList.add('hidden');
+    document.getElementById('game-over-screen')?.classList.add('hidden');
+    document.getElementById('menu-screen')?.classList.add('hidden');
+    document.getElementById('hud')?.classList.remove('hidden');
+    
     // Clear previous level
     this.clearLevel();
     
@@ -531,12 +538,12 @@ export class Game {
     const isPortrait = aspect < 1;
     
     this.camera.aspect = aspect;
-    this.camera.fov = isPortrait ? 75 : CAMERA.FOV;
-    this.camera.position.set(
-      CAMERA.POSITION.x,
-      CAMERA.POSITION.y + (isPortrait ? 2 : 0),
-      CAMERA.POSITION.z + (isPortrait ? 10 : 0)
-    );
+    this.camera.fov = isPortrait ? 65 : CAMERA.FOV;
+    
+    const xPos = isPortrait ? CAMERA.POSITION.x - 5 : CAMERA.POSITION.x;
+    const yPos = isPortrait ? CAMERA.POSITION.y + 3 : CAMERA.POSITION.y;
+    
+    this.camera.position.set(xPos, yPos, CAMERA.POSITION.z);
     this.camera.lookAt(CAMERA.LOOK_AT.x, CAMERA.LOOK_AT.y, CAMERA.LOOK_AT.z);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);

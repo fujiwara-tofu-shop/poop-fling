@@ -25,13 +25,14 @@ export const GAME = {
   SETTLE_TIME: 3000,
 } as const;
 
-// Camera
+// Camera - behind the launcher, looking at structures
 export const CAMERA = {
-  FOV: 60,
+  FOV: 50,
   NEAR: 0.1,
   FAR: 500,
-  POSITION: { x: 0, y: 8, z: 25 },
-  LOOK_AT: { x: 8, y: 4, z: 0 },
+  // Behind and slightly above the slingshot, looking right at structures
+  POSITION: { x: -15, y: 6, z: 0 },
+  LOOK_AT: { x: 10, y: 3, z: 0 },
 } as const;
 
 // World
