@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA, WORLD, COLORS, POOP, MONKEY, BLOCKS, GAME } from './Constants';
+import { CAMERA, WORLD, COLORS, POOP, MONKEY, BLOCKS, GAME, PHYSICS } from './Constants';
 import { eventBus, Events } from './EventBus';
 import { gameState } from './GameState';
 import { playFun } from './PlayFunSDK';
@@ -386,7 +386,7 @@ export class Game {
       powerFill.style.width = `${powerPercent}%`;
     }
     
-    // Update trajectory preview
+    // Update trajectory preview - match physics exactly
     const positions = this.trajectoryLine.geometry.attributes.position;
     const startPos = new THREE.Vector3(
       WORLD.SLINGSHOT_POSITION.x,
@@ -395,17 +395,27 @@ export class Game {
     );
     
     const velocity = data.velocity.clone();
-    const gravity = new THREE.Vector3(0, -20, 0);
-    const dt = 0.05;
+    const gravity = new THREE.Vector3(0, PHYSICS.GRAVITY, 0);
+    const dt = 1 / 60; // Match physics timestep
     const pos = startPos.clone();
     
+    // Simulate trajectory matching cannon.js physics
     for (let i = 0; i < 50; i++) {
       positions.setXYZ(i, pos.x, Math.max(pos.y, 0), pos.z);
       
+      // Apply gravity
       velocity.add(gravity.clone().multiplyScalar(dt));
+      
+      // Update position
       pos.add(velocity.clone().multiplyScalar(dt));
       
-      if (pos.y < 0) break;
+      if (pos.y < 0) {
+        // Fill rest with ground position
+        for (let j = i; j < 50; j++) {
+          positions.setXYZ(j, pos.x, 0, pos.z);
+        }
+        break;
+      }
     }
     
     positions.needsUpdate = true;

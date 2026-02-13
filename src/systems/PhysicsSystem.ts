@@ -91,8 +91,8 @@ export class PhysicsSystem {
     const body = new CANNON.Body({
       mass: PHYSICS.POOP_MASS,
       material: this.objectMaterial,
-      linearDamping: 0.1,
-      angularDamping: 0.3,
+      linearDamping: 0.0,  // No air resistance so trajectory matches preview
+      angularDamping: 0.1,
     });
     body.addShape(shape);
     body.position.set(position.x, position.y, position.z);
