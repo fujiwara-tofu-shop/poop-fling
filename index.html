@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Poop Fling</title>
+  
+  <!-- Open Graph -->
+  <meta property="og:title" content="Poop Fling" />
+  <meta property="og:description" content="Fling poop at monkeys! A physics-based destruction game." />
+  <meta property="og:type" content="website" />
+  
+  <!-- Play.fun SDK (CDN) -->
+  <script src="https://sdk.play.fun/latest"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+    
+    #game-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+    
+    #ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    
+    #hud {
+      position: absolute;
+      top: env(safe-area-inset-top, 10px);
+      left: 10px;
+      padding-top: 10px;
+      color: white;
+      font-size: clamp(14px, 4vw, 18px);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+    
+    #hud div {
+      margin-bottom: 6px;
+    }
+    
+    #level-indicator {
+      font-size: clamp(18px, 5vw, 24px);
+      font-weight: bold;
+    }
+    
+    #menu-screen, #game-over-screen, #level-complete-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.85);
+      pointer-events: auto;
+      padding: 20px;
+    }
+    
+    .screen-title {
+      font-size: clamp(32px, 10vw, 48px);
+      color: #8B4513;
+      text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .screen-subtitle {
+      font-size: clamp(16px, 5vw, 24px);
+      color: #fff;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    
+    .btn {
+      padding: clamp(12px, 4vw, 20px) clamp(30px, 10vw, 50px);
+      font-size: clamp(18px, 5vw, 24px);
+      background: linear-gradient(180deg, #8B4513 0%, #5D2E0C 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 10px;
+      pointer-events: auto;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      transition: transform 0.1s;
+      min-width: 150px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .btn:hover {
+      transform: scale(1.05);
+    }
+    
+    .btn:active {
+      transform: scale(0.95);
+      background: linear-gradient(180deg, #6B3310 0%, #4D1E08 100%);
+    }
+    
+    .hidden {
+      display: none !important;
+    }
+    
+    #aim-indicator {
+      position: absolute;
+      bottom: max(80px, env(safe-area-inset-bottom, 20px) + 60px);
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: clamp(14px, 4vw, 18px);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      text-align: center;
+      width: 90%;
+      padding: 10px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+    }
+    
+    .emoji {
+      font-size: clamp(48px, 15vw, 72px);
+      margin-bottom: 15px;
+    }
+    
+    /* Power indicator */
+    #power-bar {
+      position: absolute;
+      bottom: max(20px, env(safe-area-inset-bottom, 10px));
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 300px;
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    
+    #power-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #4CAF50, #FFC107, #F44336);
+      transition: width 0.05s;
+    }
+    
+    #power-bar.active {
+      display: block;
+    }
+  </style>
+  <script type="module" crossorigin src="/poop-fling/assets/index-D0A-BfBY.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <div id="ui-overlay">
+      <div id="hud" class="hidden">
+        <div id="level-indicator">Level 1</div>
+        <div id="score-display">Score: 0</div>
+        <div id="ammo-display">Poop: 💩💩💩</div>
+        <div id="monkeys-display">Monkeys: 3</div>
+      </div>
+      
+      <div id="aim-indicator" class="hidden">👆 Drag anywhere to aim, release to fling!</div>
+      
+      <div id="power-bar">
+        <div id="power-fill"></div>
+      </div>
+      
+      <div id="menu-screen">
+        <div class="emoji">💩🐵</div>
+        <h1 class="screen-title">POOP FLING</h1>
+        <p class="screen-subtitle">Knock down the monkeys!</p>
+        <button class="btn" id="play-btn">PLAY</button>
+      </div>
+      
+      <div id="game-over-screen" class="hidden">
+        <div class="emoji">😢</div>
+        <h1 class="screen-title">GAME OVER</h1>
+        <p class="screen-subtitle" id="final-score">Score: 0</p>
+        <button class="btn" id="retry-btn">TRY AGAIN</button>
+      </div>
+      
+      <div id="level-complete-screen" class="hidden">
+        <div class="emoji">🎉</div>
+        <h1 class="screen-title">LEVEL COMPLETE!</h1>
+        <p class="screen-subtitle" id="level-score">Score: 0</p>
+        <button class="btn" id="next-level-btn">NEXT LEVEL</button>
+      </div>
+    </div>
+  </div>
+  
+</body>
+</html>
