@@ -25,14 +25,14 @@ export const GAME = {
   SETTLE_TIME: 3000,
 } as const;
 
-// Camera - behind and to the side for depth perception
+// Camera - can see slingshot and structures
 export const CAMERA = {
-  FOV: 50,
+  FOV: 55,
   NEAR: 0.1,
   FAR: 500,
-  // Behind, above, and offset to the side
-  POSITION: { x: -12, y: 8, z: 12 },
-  LOOK_AT: { x: 8, y: 2, z: 0 },
+  // Pulled back, slightly elevated, angled to see both slingshot and targets
+  POSITION: { x: -5, y: 10, z: 18 },
+  LOOK_AT: { x: 5, y: 3, z: 0 },
 } as const;
 
 // World
