@@ -51,80 +51,90 @@ export class LevelGenerator {
 
     const difficulty = LEVEL_GEN.BASE_DIFFICULTY + (levelNumber - 1) * LEVEL_GEN.DIFFICULTY_SCALE;
 
-    // Calculate level parameters based on difficulty
     const numMonkeys = Math.min(
-      Math.floor(LEVEL_GEN.MIN_MONKEYS + difficulty),
+      Math.floor(LEVEL_GEN.MIN_MONKEYS + difficulty * 0.5),
       LEVEL_GEN.MAX_MONKEYS
     );
     const numBlocks = Math.min(
-      Math.floor(LEVEL_GEN.MIN_BLOCKS + difficulty * 3),
+      Math.floor(LEVEL_GEN.MIN_BLOCKS + difficulty * 4),
       LEVEL_GEN.MAX_BLOCKS
     );
-    const ammo = Math.max(3, numMonkeys + 1);
+    const ammo = Math.max(3, numMonkeys + 2);
 
     const blocks: BlockData[] = [];
     const monkeys: MonkeyData[] = [];
 
-    // Generate structure type based on level
-    const structureType = levelNumber % 5;
-
-    switch (structureType) {
-      case 1:
-        this.generateTower(rng, blocks, monkeys, numBlocks, numMonkeys);
-        break;
-      case 2:
-        this.generatePyramid(rng, blocks, monkeys, numBlocks, numMonkeys);
-        break;
-      case 3:
-        this.generateBridge(rng, blocks, monkeys, numBlocks, numMonkeys);
-        break;
-      case 4:
-        this.generateCastle(rng, blocks, monkeys, numBlocks, numMonkeys);
-        break;
-      default:
-        this.generateBasicStack(rng, blocks, monkeys, numBlocks, numMonkeys);
+    // Generate 1-3 structures spread across the play area
+    const numStructures = Math.min(1 + Math.floor(levelNumber / 3), 3);
+    
+    for (let s = 0; s < numStructures; s++) {
+      const structX = WORLD.STRUCTURE_START_X + s * 6;
+      const structZ = rng.nextFloat(-3, 3);
+      const blocksForThis = Math.ceil(numBlocks / numStructures);
+      const monkeysForThis = Math.ceil(numMonkeys / numStructures);
+      
+      const structureType = rng.nextInt(0, 4);
+      
+      switch (structureType) {
+        case 0:
+          this.generateTower(rng, blocks, monkeys, blocksForThis, monkeysForThis, structX, structZ);
+          break;
+        case 1:
+          this.generateWall(rng, blocks, monkeys, blocksForThis, monkeysForThis, structX, structZ);
+          break;
+        case 2:
+          this.generatePlatforms(rng, blocks, monkeys, blocksForThis, monkeysForThis, structX, structZ);
+          break;
+        case 3:
+          this.generateFortress(rng, blocks, monkeys, blocksForThis, monkeysForThis, structX, structZ);
+          break;
+        default:
+          this.generateStack(rng, blocks, monkeys, blocksForThis, monkeysForThis, structX, structZ);
+      }
     }
 
     return { blocks, monkeys, ammo };
   }
 
-  private generateBasicStack(
+  private generateStack(
     rng: SeededRandom,
     blocks: BlockData[],
     monkeys: MonkeyData[],
     numBlocks: number,
-    numMonkeys: number
+    numMonkeys: number,
+    baseX: number,
+    baseZ: number
   ): void {
-    const baseX = WORLD.STRUCTURE_START_X;
     const blockSize = LEVEL_GEN.BLOCK_SIZE;
-
-    // Create layers of blocks
-    const layers = Math.ceil(numBlocks / 3);
+    const width = rng.nextInt(2, 4);
     let blocksPlaced = 0;
+    let layer = 0;
 
-    for (let layer = 0; layer < layers && blocksPlaced < numBlocks; layer++) {
+    while (blocksPlaced < numBlocks) {
       const y = layer * blockSize + blockSize / 2;
-      const blocksInLayer = Math.min(3, numBlocks - blocksPlaced);
-
-      for (let i = 0; i < blocksInLayer; i++) {
-        const x = baseX + (i - (blocksInLayer - 1) / 2) * blockSize * 1.2;
+      
+      for (let i = 0; i < width && blocksPlaced < numBlocks; i++) {
+        const x = baseX + (i - (width - 1) / 2) * blockSize * 1.1;
+        const z = baseZ + rng.nextFloat(-0.5, 0.5);
         const type = this.getBlockType(rng, layer);
 
         blocks.push({
-          position: new THREE.Vector3(x, y, 0),
+          position: new THREE.Vector3(x, y, z),
           size: new THREE.Vector3(blockSize, blockSize, blockSize),
           type,
           health: BLOCKS[type.toUpperCase() as keyof typeof BLOCKS].HEALTH,
         });
         blocksPlaced++;
       }
+      layer++;
     }
 
-    // Place monkeys on top
+    // Place monkeys on and around the stack
     for (let i = 0; i < numMonkeys; i++) {
-      const x = baseX + rng.nextFloat(-1, 1);
-      const y = layers * blockSize + MONKEY.BODY_RADIUS + 0.1;
-      monkeys.push({ position: new THREE.Vector3(x, y, rng.nextFloat(-0.3, 0.3)) });
+      const x = baseX + rng.nextFloat(-1.5, 1.5);
+      const y = layer * blockSize + MONKEY.BODY_RADIUS + 0.2;
+      const z = baseZ + rng.nextFloat(-1, 1);
+      monkeys.push({ position: new THREE.Vector3(x, y, z) });
     }
   }
 
@@ -133,30 +143,32 @@ export class LevelGenerator {
     blocks: BlockData[],
     monkeys: MonkeyData[],
     numBlocks: number,
-    numMonkeys: number
+    numMonkeys: number,
+    baseX: number,
+    baseZ: number
   ): void {
-    const baseX = WORLD.STRUCTURE_START_X + 2;
     const blockSize = LEVEL_GEN.BLOCK_SIZE;
-
-    // Tall thin tower
-    const height = Math.min(numBlocks, 8);
+    const height = Math.min(numBlocks, 6);
     let blocksPlaced = 0;
 
+    // Main tower column
     for (let y = 0; y < height && blocksPlaced < numBlocks; y++) {
-      const type = this.getBlockType(rng, y);
+      const type = y === 0 ? 'stone' : this.getBlockType(rng, y);
       blocks.push({
-        position: new THREE.Vector3(baseX, y * blockSize + blockSize / 2, 0),
+        position: new THREE.Vector3(baseX, y * blockSize + blockSize / 2, baseZ),
         size: new THREE.Vector3(blockSize, blockSize, blockSize),
         type,
         health: BLOCKS[type.toUpperCase() as keyof typeof BLOCKS].HEALTH,
       });
       blocksPlaced++;
+    }
 
-      // Add horizontal supports every 2 levels
-      if (y % 2 === 1 && blocksPlaced < numBlocks) {
+    // Side supports
+    for (let side = -1; side <= 1; side += 2) {
+      for (let y = 0; y < height - 1 && blocksPlaced < numBlocks; y += 2) {
         blocks.push({
-          position: new THREE.Vector3(baseX - blockSize, y * blockSize + blockSize / 2, 0),
-          size: new THREE.Vector3(blockSize, blockSize * 0.5, blockSize),
+          position: new THREE.Vector3(baseX + side * blockSize, y * blockSize + blockSize / 2, baseZ),
+          size: new THREE.Vector3(blockSize * 0.8, blockSize * 0.5, blockSize * 0.8),
           type: 'wood',
           health: BLOCKS.WOOD.HEALTH,
         });
@@ -164,175 +176,189 @@ export class LevelGenerator {
       }
     }
 
-    // Monkeys at different heights
+    // Monkeys at various heights
     for (let i = 0; i < numMonkeys; i++) {
-      const y = (height - 1 - i) * blockSize + blockSize + MONKEY.BODY_RADIUS;
+      const yLevel = rng.nextInt(1, height);
+      const side = rng.pick([-1.2, 1.2]);
       monkeys.push({
-        position: new THREE.Vector3(baseX + 0.8, Math.max(y, MONKEY.BODY_RADIUS + 0.1), 0),
+        position: new THREE.Vector3(
+          baseX + side,
+          yLevel * blockSize + MONKEY.BODY_RADIUS,
+          baseZ + rng.nextFloat(-0.5, 0.5)
+        ),
       });
     }
   }
 
-  private generatePyramid(
+  private generateWall(
     rng: SeededRandom,
     blocks: BlockData[],
     monkeys: MonkeyData[],
     numBlocks: number,
-    numMonkeys: number
+    numMonkeys: number,
+    baseX: number,
+    baseZ: number
   ): void {
-    const baseX = WORLD.STRUCTURE_START_X;
     const blockSize = LEVEL_GEN.BLOCK_SIZE;
-
-    // Pyramid structure
-    let layer = 0;
+    const width = rng.nextInt(3, 5);
+    const height = rng.nextInt(2, 4);
     let blocksPlaced = 0;
-    let layerWidth = 4;
 
-    while (layerWidth > 0 && blocksPlaced < numBlocks) {
-      const y = layer * blockSize + blockSize / 2;
-
-      for (let i = 0; i < layerWidth && blocksPlaced < numBlocks; i++) {
-        const x = baseX + (i - (layerWidth - 1) / 2) * blockSize;
-        const type = this.getBlockType(rng, layer);
+    // Build a wall with depth
+    for (let y = 0; y < height && blocksPlaced < numBlocks; y++) {
+      for (let i = 0; i < width && blocksPlaced < numBlocks; i++) {
+        const x = baseX + (i - (width - 1) / 2) * blockSize * 1.05;
+        const z = baseZ;
+        const type = y === 0 ? 'stone' : this.getBlockType(rng, y);
 
         blocks.push({
-          position: new THREE.Vector3(x, y, 0),
-          size: new THREE.Vector3(blockSize, blockSize, blockSize),
+          position: new THREE.Vector3(x, y * blockSize + blockSize / 2, z),
+          size: new THREE.Vector3(blockSize, blockSize, blockSize * 0.8),
           type,
           health: BLOCKS[type.toUpperCase() as keyof typeof BLOCKS].HEALTH,
         });
         blocksPlaced++;
       }
-
-      layer++;
-      layerWidth--;
     }
 
-    // Monkey on top
-    const topY = layer * blockSize + MONKEY.BODY_RADIUS;
+    // Monkeys behind and on the wall
     for (let i = 0; i < numMonkeys; i++) {
-      monkeys.push({
-        position: new THREE.Vector3(baseX + i * 0.5, topY + i * 0.3, 0),
-      });
+      const x = baseX + rng.nextFloat(-width/2, width/2);
+      const behindWall = rng.next() > 0.5;
+      const y = behindWall ? MONKEY.BODY_RADIUS + 0.1 : height * blockSize + MONKEY.BODY_RADIUS + 0.2;
+      const z = behindWall ? baseZ + 1.5 : baseZ;
+      monkeys.push({ position: new THREE.Vector3(x, y, z) });
     }
   }
 
-  private generateBridge(
+  private generatePlatforms(
     rng: SeededRandom,
     blocks: BlockData[],
     monkeys: MonkeyData[],
     numBlocks: number,
-    numMonkeys: number
+    numMonkeys: number,
+    baseX: number,
+    baseZ: number
   ): void {
-    const baseX = WORLD.STRUCTURE_START_X;
     const blockSize = LEVEL_GEN.BLOCK_SIZE;
+    let blocksPlaced = 0;
+    const numPlatforms = rng.nextInt(2, 3);
 
-    // Two pillars with a bridge
-    const pillarHeight = 3;
+    for (let p = 0; p < numPlatforms && blocksPlaced < numBlocks; p++) {
+      const platX = baseX + rng.nextFloat(-2, 2);
+      const platY = (p + 1) * 2;
+      const platZ = baseZ + rng.nextFloat(-2, 2);
+      const platWidth = rng.nextInt(2, 3);
+
+      // Platform supports (pillars)
+      for (let y = 0; y < platY && blocksPlaced < numBlocks; y++) {
+        blocks.push({
+          position: new THREE.Vector3(platX - 1, y * blockSize + blockSize / 2, platZ),
+          size: new THREE.Vector3(blockSize * 0.6, blockSize, blockSize * 0.6),
+          type: 'stone',
+          health: BLOCKS.STONE.HEALTH,
+        });
+        blocksPlaced++;
+        
+        if (blocksPlaced < numBlocks) {
+          blocks.push({
+            position: new THREE.Vector3(platX + 1, y * blockSize + blockSize / 2, platZ),
+            size: new THREE.Vector3(blockSize * 0.6, blockSize, blockSize * 0.6),
+            type: 'stone',
+            health: BLOCKS.STONE.HEALTH,
+          });
+          blocksPlaced++;
+        }
+      }
+
+      // Platform surface
+      for (let i = 0; i < platWidth && blocksPlaced < numBlocks; i++) {
+        blocks.push({
+          position: new THREE.Vector3(platX + (i - (platWidth-1)/2) * blockSize, platY * blockSize + blockSize / 2, platZ),
+          size: new THREE.Vector3(blockSize, blockSize * 0.4, blockSize),
+          type: 'wood',
+          health: BLOCKS.WOOD.HEALTH,
+        });
+        blocksPlaced++;
+      }
+
+      // Monkey on this platform
+      if (monkeys.length < numMonkeys) {
+        monkeys.push({
+          position: new THREE.Vector3(platX, platY * blockSize + blockSize + MONKEY.BODY_RADIUS, platZ),
+        });
+      }
+    }
+  }
+
+  private generateFortress(
+    rng: SeededRandom,
+    blocks: BlockData[],
+    monkeys: MonkeyData[],
+    numBlocks: number,
+    numMonkeys: number,
+    baseX: number,
+    baseZ: number
+  ): void {
+    const blockSize = LEVEL_GEN.BLOCK_SIZE;
     let blocksPlaced = 0;
 
-    // Left pillar
-    for (let y = 0; y < pillarHeight && blocksPlaced < numBlocks; y++) {
+    // Base walls (front and back)
+    const width = 4;
+    for (let i = 0; i < width && blocksPlaced < numBlocks; i++) {
+      // Front wall
       blocks.push({
-        position: new THREE.Vector3(baseX, y * blockSize + blockSize / 2, 0),
+        position: new THREE.Vector3(baseX + (i - (width-1)/2) * blockSize, blockSize / 2, baseZ - 1),
         size: new THREE.Vector3(blockSize, blockSize, blockSize),
         type: 'stone',
         health: BLOCKS.STONE.HEALTH,
       });
       blocksPlaced++;
+
+      // Back wall
+      if (blocksPlaced < numBlocks) {
+        blocks.push({
+          position: new THREE.Vector3(baseX + (i - (width-1)/2) * blockSize, blockSize / 2, baseZ + 1),
+          size: new THREE.Vector3(blockSize, blockSize, blockSize),
+          type: 'stone',
+          health: BLOCKS.STONE.HEALTH,
+        });
+        blocksPlaced++;
+      }
     }
 
-    // Right pillar
-    for (let y = 0; y < pillarHeight && blocksPlaced < numBlocks; y++) {
-      blocks.push({
-        position: new THREE.Vector3(baseX + 4, y * blockSize + blockSize / 2, 0),
-        size: new THREE.Vector3(blockSize, blockSize, blockSize),
-        type: 'stone',
-        health: BLOCKS.STONE.HEALTH,
-      });
-      blocksPlaced++;
+    // Corner towers
+    const corners = [[-1.5, -1], [-1.5, 1], [1.5, -1], [1.5, 1]];
+    for (const [cx, cz] of corners) {
+      for (let y = 1; y < 3 && blocksPlaced < numBlocks; y++) {
+        blocks.push({
+          position: new THREE.Vector3(baseX + cx * blockSize, y * blockSize + blockSize / 2, baseZ + cz),
+          size: new THREE.Vector3(blockSize * 0.8, blockSize, blockSize * 0.8),
+          type: y === 1 ? 'stone' : 'wood',
+          health: y === 1 ? BLOCKS.STONE.HEALTH : BLOCKS.WOOD.HEALTH,
+        });
+        blocksPlaced++;
+      }
     }
 
-    // Bridge planks
+    // Roof
     for (let i = 0; i < 3 && blocksPlaced < numBlocks; i++) {
       blocks.push({
-        position: new THREE.Vector3(baseX + 1 + i, pillarHeight * blockSize + blockSize / 2, 0),
-        size: new THREE.Vector3(blockSize * 1.2, blockSize * 0.3, blockSize),
+        position: new THREE.Vector3(baseX + (i - 1) * blockSize, 2.5 * blockSize, baseZ),
+        size: new THREE.Vector3(blockSize, blockSize * 0.3, blockSize * 2),
         type: 'wood',
         health: BLOCKS.WOOD.HEALTH,
       });
       blocksPlaced++;
     }
 
-    // Monkeys on the bridge
+    // Monkeys inside fortress
     for (let i = 0; i < numMonkeys; i++) {
       monkeys.push({
         position: new THREE.Vector3(
-          baseX + 1.5 + i * 0.8,
-          pillarHeight * blockSize + blockSize + MONKEY.BODY_RADIUS,
-          0
-        ),
-      });
-    }
-  }
-
-  private generateCastle(
-    rng: SeededRandom,
-    blocks: BlockData[],
-    monkeys: MonkeyData[],
-    numBlocks: number,
-    numMonkeys: number
-  ): void {
-    const baseX = WORLD.STRUCTURE_START_X;
-    const blockSize = LEVEL_GEN.BLOCK_SIZE;
-    let blocksPlaced = 0;
-
-    // Castle base
-    for (let i = 0; i < 5 && blocksPlaced < numBlocks; i++) {
-      blocks.push({
-        position: new THREE.Vector3(baseX + i * blockSize * 0.9, blockSize / 2, 0),
-        size: new THREE.Vector3(blockSize, blockSize, blockSize),
-        type: 'stone',
-        health: BLOCKS.STONE.HEALTH,
-      });
-      blocksPlaced++;
-    }
-
-    // Towers at edges
-    for (let y = 1; y < 3 && blocksPlaced < numBlocks; y++) {
-      blocks.push({
-        position: new THREE.Vector3(baseX, y * blockSize + blockSize / 2, 0),
-        size: new THREE.Vector3(blockSize, blockSize, blockSize),
-        type: 'stone',
-        health: BLOCKS.STONE.HEALTH,
-      });
-      blocksPlaced++;
-
-      blocks.push({
-        position: new THREE.Vector3(baseX + 4 * blockSize * 0.9, y * blockSize + blockSize / 2, 0),
-        size: new THREE.Vector3(blockSize, blockSize, blockSize),
-        type: 'stone',
-        health: BLOCKS.STONE.HEALTH,
-      });
-      blocksPlaced++;
-    }
-
-    // Glass windows
-    blocks.push({
-      position: new THREE.Vector3(baseX + 2 * blockSize * 0.9, blockSize * 1.5, 0),
-      size: new THREE.Vector3(blockSize, blockSize, blockSize * 0.3),
-      type: 'glass',
-      health: BLOCKS.GLASS.HEALTH,
-    });
-    blocksPlaced++;
-
-    // Monkeys inside castle
-    for (let i = 0; i < numMonkeys; i++) {
-      monkeys.push({
-        position: new THREE.Vector3(
-          baseX + 1.5 + i * 0.6,
-          blockSize + MONKEY.BODY_RADIUS + 0.1,
-          0
+          baseX + rng.nextFloat(-1, 1),
+          MONKEY.BODY_RADIUS + 0.1,
+          baseZ + rng.nextFloat(-0.5, 0.5)
         ),
       });
     }
@@ -341,11 +367,10 @@ export class LevelGenerator {
   private getBlockType(rng: SeededRandom, layer: number): 'wood' | 'stone' | 'glass' {
     const rand = rng.next();
     if (layer === 0) {
-      // Base layer is usually stronger
-      return rand < 0.7 ? 'stone' : 'wood';
-    } else if (rand < 0.2) {
+      return rand < 0.8 ? 'stone' : 'wood';
+    } else if (rand < 0.15) {
       return 'glass';
-    } else if (rand < 0.5) {
+    } else if (rand < 0.4) {
       return 'stone';
     } else {
       return 'wood';

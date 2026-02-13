@@ -25,14 +25,14 @@ export const GAME = {
   SETTLE_TIME: 3000,
 } as const;
 
-// Camera - behind the launcher, looking at structures
+// Camera - behind and to the side for depth perception
 export const CAMERA = {
   FOV: 50,
   NEAR: 0.1,
   FAR: 500,
-  // Behind and slightly above the slingshot, looking right at structures
-  POSITION: { x: -15, y: 6, z: 0 },
-  LOOK_AT: { x: 10, y: 3, z: 0 },
+  // Behind, above, and offset to the side
+  POSITION: { x: -12, y: 8, z: 12 },
+  LOOK_AT: { x: 8, y: 2, z: 0 },
 } as const;
 
 // World
@@ -83,13 +83,13 @@ export const BLOCKS = {
 export const LEVEL_GEN = {
   BASE_DIFFICULTY: 1,
   DIFFICULTY_SCALE: 0.3,
-  MIN_BLOCKS: 5,
-  MAX_BLOCKS: 20,
-  MIN_MONKEYS: 1,
-  MAX_MONKEYS: 5,
-  STRUCTURE_WIDTH: 8,
-  STRUCTURE_HEIGHT: 8,
-  BLOCK_SIZE: 1,
+  MIN_BLOCKS: 8,
+  MAX_BLOCKS: 25,
+  MIN_MONKEYS: 2,
+  MAX_MONKEYS: 6,
+  STRUCTURE_WIDTH: 12,
+  STRUCTURE_HEIGHT: 10,
+  BLOCK_SIZE: 1.2,
 } as const;
 
 // Colors
