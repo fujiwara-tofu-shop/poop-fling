@@ -117,13 +117,13 @@ export class PhysicsSystem {
       material: this.objectMaterial,
       linearDamping: 0.3,
       angularDamping: 0.5,
-      sleepSpeedLimit: 0.1,
-      sleepTimeLimit: 1,
+      sleepSpeedLimit: 0.2,  // Sleep faster once settled
+      sleepTimeLimit: 0.5,   // Go to sleep after 0.5s of low velocity
     });
     body.addShape(shape);
     body.position.set(position.x, position.y, position.z);
-    // Start sleeping so structures don't collapse immediately
-    body.sleep();
+    // Don't start sleeping - let structures settle naturally
+    // They'll quickly go to sleep once stationary
 
     this.world.addBody(body);
     this.bodies.set(id, { mesh, body, type: 'block', id, health });
@@ -145,8 +145,8 @@ export class PhysicsSystem {
     });
     body.addShape(shape);
     body.position.set(position.x, position.y, position.z);
-    // Start sleeping
-    body.sleep();
+    // DON'T start sleeping - let them settle naturally onto structures
+    // They'll fall and rest on blocks, then go to sleep from low velocity
 
     this.world.addBody(body);
     this.bodies.set(id, { mesh, body, type: 'monkey', id, health: 1 });

@@ -414,34 +414,34 @@ export class Game {
       powerFill.style.width = `${powerPercent}%`;
     }
     
-    // Update trajectory preview from current poop position
+    // Update trajectory preview using analytical projectile motion
+    // x(t) = x0 + vx*t
+    // y(t) = y0 + vy*t + 0.5*g*t^2
+    // This is exact - no integration errors
     const positions = this.trajectoryLine.geometry.attributes.position;
     const startPos = this.currentPoop 
       ? this.currentPoop.mesh.position.clone()
       : new THREE.Vector3(WORLD.SLINGSHOT_POSITION.x, WORLD.SLINGSHOT_POSITION.y + 1, 0);
     
-    const velocity = data.velocity.clone();
-    const gravity = new THREE.Vector3(0, PHYSICS.GRAVITY, 0);
-    // Use EXACT same timestep as physics for accurate preview
-    const dt = PHYSICS.TIME_STEP;
-    const pos = startPos.clone();
+    const v0 = data.velocity.clone();
+    const g = PHYSICS.GRAVITY; // negative value
     
-    // Simulate trajectory - use more steps since dt is smaller
-    // Skip some steps to spread points across longer time (show every 2nd step)
-    let step = 0;
+    // Show trajectory for ~2 seconds of flight time, 50 points
+    const totalTime = 2.0;
+    const dt = totalTime / 50;
+    
     for (let i = 0; i < 50; i++) {
-      positions.setXYZ(i, pos.x, Math.max(pos.y, 0), pos.z);
+      const t = i * dt;
+      const x = startPos.x + v0.x * t;
+      const y = startPos.y + v0.y * t + 0.5 * g * t * t;
+      const z = startPos.z + v0.z * t;
       
-      // Simulate 2 physics steps per point for longer trajectory view
-      for (let s = 0; s < 2; s++) {
-        velocity.add(gravity.clone().multiplyScalar(dt));
-        pos.add(velocity.clone().multiplyScalar(dt));
-        step++;
-      }
+      positions.setXYZ(i, x, Math.max(y, 0), z);
       
-      if (pos.y < 0) {
+      if (y < 0) {
+        // Fill remaining points at ground level
         for (let j = i; j < 50; j++) {
-          positions.setXYZ(j, pos.x, 0, pos.z);
+          positions.setXYZ(j, x, 0, z);
         }
         break;
       }
