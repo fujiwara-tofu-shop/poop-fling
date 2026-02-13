@@ -1,21 +1,14 @@
 import * as THREE from 'three';
 import { eventBus, Events } from '../core/EventBus';
 import { gameState } from '../core/GameState';
-import { GAME, WORLD } from '../core/Constants';
+import { GAME } from '../core/Constants';
 
 export class InputSystem {
   private isDragging = false;
   private startPos = new THREE.Vector2();
   private currentPos = new THREE.Vector2();
-  private slingshotOrigin: THREE.Vector3;
   
   constructor(private canvas: HTMLCanvasElement) {
-    this.slingshotOrigin = new THREE.Vector3(
-      WORLD.SLINGSHOT_POSITION.x,
-      WORLD.SLINGSHOT_POSITION.y,
-      WORLD.SLINGSHOT_POSITION.z
-    );
-    
     this.setupEventListeners();
   }
 
@@ -83,13 +76,9 @@ export class InputSystem {
 
     this.currentPos.set(x, y);
 
-    const pullVector = this.calculatePullVector();
-    const launchData = this.calculateLaunchData(pullVector);
+    const launchData = this.calculateLaunchData();
 
-    eventBus.emit(Events.AIM_UPDATE, {
-      pullVector,
-      ...launchData,
-    });
+    eventBus.emit(Events.AIM_UPDATE, launchData);
   }
 
   private handlePointerUp(): void {
@@ -98,11 +87,10 @@ export class InputSystem {
     this.isDragging = false;
     gameState.game.isAiming = false;
 
-    const pullVector = this.calculatePullVector();
-    const launchData = this.calculateLaunchData(pullVector);
+    const launchData = this.calculateLaunchData();
 
     // Only launch if there's significant pull
-    if (launchData.power > 2) {
+    if (launchData.power > 5) {
       eventBus.emit(Events.AIM_RELEASE, {
         velocity: launchData.velocity,
         power: launchData.power,
@@ -114,46 +102,58 @@ export class InputSystem {
     }
   }
 
-  private calculatePullVector(): THREE.Vector2 {
-    const dx = this.startPos.x - this.currentPos.x;
-    const dy = this.startPos.y - this.currentPos.y;
-    return new THREE.Vector2(dx, dy);
-  }
-
-  private calculateLaunchData(pullVector: THREE.Vector2): {
+  private calculateLaunchData(): {
     velocity: THREE.Vector3;
     power: number;
     angle: number;
   } {
-    // Convert screen pull to game velocity
-    const pullLength = pullVector.length();
-    const normalizedPull = Math.min(pullLength / 200, 1); // Max pull at 200px
+    // Pull vector: from current position back to start (drag direction)
+    const dx = this.startPos.x - this.currentPos.x;
+    const dy = this.startPos.y - this.currentPos.y;
+    
+    const pullLength = Math.sqrt(dx * dx + dy * dy);
+    const normalizedPull = Math.min(pullLength / 150, 1); // Max pull at 150px
 
     // Power scales with pull distance
     const power = GAME.LAUNCH_POWER_MIN + normalizedPull * (GAME.LAUNCH_POWER_MAX - GAME.LAUNCH_POWER_MIN);
 
-    // Angle based on pull direction (pull down-left to launch up-right)
-    const pullAngle = Math.atan2(pullVector.y, pullVector.x);
-    const launchAngle = Math.max(
-      GAME.LAUNCH_ANGLE_MIN,
-      Math.min(GAME.LAUNCH_ANGLE_MAX, (pullAngle * 180) / Math.PI)
-    );
-    const launchAngleRad = (launchAngle * Math.PI) / 180;
+    // Launch direction is opposite of pull
+    // If you drag down-left, launch goes up-right
+    // Screen Y is inverted (down = positive), so we flip dy
+    const launchDirX = dx;  // Pull left = launch right
+    const launchDirY = -dy; // Pull down = launch up (screen coords inverted)
+    
+    // Normalize the direction
+    const dirLength = Math.sqrt(launchDirX * launchDirX + launchDirY * launchDirY);
+    
+    let normX = 1;
+    let normY = 0.5;
+    
+    if (dirLength > 0.001) {
+      normX = launchDirX / dirLength;
+      normY = launchDirY / dirLength;
+    }
+    
+    // Ensure we're always launching forward and somewhat upward
+    // Clamp the angle between 15 and 75 degrees
+    let angle = Math.atan2(normY, normX) * (180 / Math.PI);
+    angle = Math.max(GAME.LAUNCH_ANGLE_MIN, Math.min(GAME.LAUNCH_ANGLE_MAX, angle));
+    
+    // If dragging right (wrong direction), default to 45 degrees
+    if (dx < 0) {
+      angle = 45;
+    }
+    
+    const angleRad = angle * (Math.PI / 180);
 
     // Calculate velocity vector
     const velocity = new THREE.Vector3(
-      Math.cos(launchAngleRad) * power,
-      Math.sin(launchAngleRad) * power,
+      Math.cos(angleRad) * power,
+      Math.sin(angleRad) * power,
       0
     );
 
-    return { velocity, power, angle: launchAngle };
-  }
-
-  getPullAmount(): number {
-    if (!this.isDragging) return 0;
-    const pullVector = this.calculatePullVector();
-    return Math.min(pullVector.length() / 200, 1);
+    return { velocity, power, angle };
   }
 
   destroy(): void {

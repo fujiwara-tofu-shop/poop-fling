@@ -223,19 +223,50 @@ export class PhysicsSystem {
   }
 
   isSettled(): boolean {
+    // Need at least one body to check
+    if (this.bodies.size === 0) return false;
+    
+    let hasMovingPoop = false;
+    
     for (const [, pb] of this.bodies) {
-      if (pb.body.velocity.length() > 0.5 || pb.body.angularVelocity.length() > 0.5) {
+      const speed = pb.body.velocity.length();
+      const angularSpeed = pb.body.angularVelocity.length();
+      
+      // If poop is still moving fast, not settled
+      if (pb.type === 'poop') {
+        if (speed > 0.3 || angularSpeed > 0.3) {
+          return false;
+        }
+        hasMovingPoop = true;
+      }
+      
+      // Check other objects too
+      if (speed > 1 || angularSpeed > 1) {
         return false;
       }
     }
-    return true;
+    
+    return hasMovingPoop || this.bodies.size > 0;
   }
 
   clear(): void {
-    for (const [id] of this.bodies) {
+    // Only remove non-ground bodies
+    const toRemove: string[] = [];
+    for (const [id, pb] of this.bodies) {
+      if (pb.type !== 'ground') {
+        toRemove.push(id);
+      }
+    }
+    for (const id of toRemove) {
       this.removeBody(id);
     }
-    this.bodies.clear();
     this.nextId = 0;
+  }
+
+  hasPoop(): boolean {
+    for (const [, pb] of this.bodies) {
+      if (pb.type === 'poop') return true;
+    }
+    return false;
   }
 }

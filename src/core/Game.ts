@@ -518,7 +518,12 @@ export class Game {
     // Check if physics has settled
     if (gameState.game.isWaitingForSettle) {
       this.settleCheckTimer += delta;
-      if (this.settleCheckTimer > 1 && this.physics.isSettled()) {
+      
+      // Force settle after 5 seconds or when physics settles (after 1 second minimum)
+      const forceSettle = this.settleCheckTimer > 5;
+      const physicsSettled = this.settleCheckTimer > 1.5 && this.physics.isSettled();
+      
+      if (forceSettle || physicsSettled) {
         this.settleCheckTimer = 0;
         eventBus.emit(Events.POOP_SETTLED);
       }
