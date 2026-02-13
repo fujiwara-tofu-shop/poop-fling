@@ -1,0 +1,27 @@
+{
+  "name": "poop-fling",
+  "version": "1.0.0",
+  "description": "3D Angry Birds style game - fling poop at monkeys",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "game",
+    "threejs",
+    "physics"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cannon-es": "^0.20.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.160.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
+  }
+}
