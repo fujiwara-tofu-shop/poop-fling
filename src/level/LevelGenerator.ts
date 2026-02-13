@@ -260,10 +260,12 @@ export class LevelGenerator {
       blocksPlaced++;
     }
 
-    // Monkeys on bridge
+    // Monkeys on bridge - position them to rest on top of planks
+    // Planks top is at: pillarHeight * blockSize + blockSize * 0.3 + (blockSize * 0.4 / 2)
+    const plankTop = pillarHeight * blockSize + blockSize * 0.3 + blockSize * 0.2;
     for (let i = 0; i < numMonkeys; i++) {
       const x = baseX + (i - (numMonkeys - 1) / 2) * 1.0;
-      const y = pillarHeight * blockSize + blockSize + MONKEY.BODY_RADIUS;
+      const y = plankTop + MONKEY.BODY_RADIUS;
       monkeys.push({ position: new THREE.Vector3(x, y, 0) });
     }
   }

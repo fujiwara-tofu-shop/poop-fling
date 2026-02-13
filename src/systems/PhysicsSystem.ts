@@ -166,6 +166,8 @@ export class PhysicsSystem {
   removeBody(id: string): void {
     const physicsBody = this.bodies.get(id);
     if (physicsBody) {
+      // Wake nearby bodies before removing so they fall when support is gone
+      this.wakeNearby(physicsBody.body.position, 3);
       this.world.removeBody(physicsBody.body);
       this.bodies.delete(id);
     }

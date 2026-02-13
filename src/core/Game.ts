@@ -422,15 +422,22 @@ export class Game {
     
     const velocity = data.velocity.clone();
     const gravity = new THREE.Vector3(0, PHYSICS.GRAVITY, 0);
-    const dt = 1 / 30; // Larger timestep for longer trajectory preview
+    // Use EXACT same timestep as physics for accurate preview
+    const dt = PHYSICS.TIME_STEP;
     const pos = startPos.clone();
     
-    // Simulate trajectory
+    // Simulate trajectory - use more steps since dt is smaller
+    // Skip some steps to spread points across longer time (show every 2nd step)
+    let step = 0;
     for (let i = 0; i < 50; i++) {
       positions.setXYZ(i, pos.x, Math.max(pos.y, 0), pos.z);
       
-      velocity.add(gravity.clone().multiplyScalar(dt));
-      pos.add(velocity.clone().multiplyScalar(dt));
+      // Simulate 2 physics steps per point for longer trajectory view
+      for (let s = 0; s < 2; s++) {
+        velocity.add(gravity.clone().multiplyScalar(dt));
+        pos.add(velocity.clone().multiplyScalar(dt));
+        step++;
+      }
       
       if (pos.y < 0) {
         for (let j = i; j < 50; j++) {
