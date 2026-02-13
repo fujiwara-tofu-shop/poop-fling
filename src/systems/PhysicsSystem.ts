@@ -277,4 +277,13 @@ export class PhysicsSystem {
     }
     return false;
   }
+
+  wakeNearby(position: CANNON.Vec3, radius: number): void {
+    for (const [, pb] of this.bodies) {
+      const dist = pb.body.position.distanceTo(position);
+      if (dist < radius) {
+        pb.body.wakeUp();
+      }
+    }
+  }
 }

@@ -367,6 +367,21 @@ export class Game {
     document.getElementById('power-bar')?.classList.add('active');
   }
 
+  private updatePoopPullback(pullX: number, pullY: number): void {
+    if (!this.currentPoop) return;
+    
+    // Move poop back based on pull (visual only, clamped)
+    const maxPull = 2;
+    const clampedX = Math.max(-maxPull, Math.min(0, -pullX * 0.01));
+    const clampedY = Math.max(-maxPull, Math.min(maxPull, -pullY * 0.01));
+    
+    this.currentPoop.mesh.position.set(
+      WORLD.SLINGSHOT_POSITION.x + clampedX,
+      WORLD.SLINGSHOT_POSITION.y + 1 + clampedY,
+      WORLD.SLINGSHOT_POSITION.z
+    );
+  }
+
   private onAimUpdate(data: any): void {
     if (data.cancelled) {
       if (this.trajectoryLine) {
@@ -374,10 +389,23 @@ export class Game {
         this.trajectoryLine = null;
       }
       document.getElementById('power-bar')?.classList.remove('active');
+      // Reset poop position
+      if (this.currentPoop) {
+        this.currentPoop.mesh.position.set(
+          WORLD.SLINGSHOT_POSITION.x,
+          WORLD.SLINGSHOT_POSITION.y + 1,
+          WORLD.SLINGSHOT_POSITION.z
+        );
+      }
       return;
     }
     
     if (!this.trajectoryLine || !data.velocity) return;
+    
+    // Update poop pullback visual
+    if (data.pullX !== undefined && data.pullY !== undefined) {
+      this.updatePoopPullback(data.pullX, data.pullY);
+    }
     
     // Update power bar
     const powerPercent = Math.min(100, (data.power / GAME.LAUNCH_POWER_MAX) * 100);
@@ -386,31 +414,25 @@ export class Game {
       powerFill.style.width = `${powerPercent}%`;
     }
     
-    // Update trajectory preview - match physics exactly
+    // Update trajectory preview from current poop position
     const positions = this.trajectoryLine.geometry.attributes.position;
-    const startPos = new THREE.Vector3(
-      WORLD.SLINGSHOT_POSITION.x,
-      WORLD.SLINGSHOT_POSITION.y + 1,
-      WORLD.SLINGSHOT_POSITION.z
-    );
+    const startPos = this.currentPoop 
+      ? this.currentPoop.mesh.position.clone()
+      : new THREE.Vector3(WORLD.SLINGSHOT_POSITION.x, WORLD.SLINGSHOT_POSITION.y + 1, 0);
     
     const velocity = data.velocity.clone();
     const gravity = new THREE.Vector3(0, PHYSICS.GRAVITY, 0);
-    const dt = 1 / 60; // Match physics timestep
+    const dt = 1 / 30; // Larger timestep for longer trajectory preview
     const pos = startPos.clone();
     
-    // Simulate trajectory matching cannon.js physics
+    // Simulate trajectory
     for (let i = 0; i < 50; i++) {
       positions.setXYZ(i, pos.x, Math.max(pos.y, 0), pos.z);
       
-      // Apply gravity
       velocity.add(gravity.clone().multiplyScalar(dt));
-      
-      // Update position
       pos.add(velocity.clone().multiplyScalar(dt));
       
       if (pos.y < 0) {
-        // Fill rest with ground position
         for (let j = i; j < 50; j++) {
           positions.setXYZ(j, pos.x, 0, pos.z);
         }
@@ -433,7 +455,17 @@ export class Game {
     // Hide power bar
     document.getElementById('power-bar')?.classList.remove('active');
     
-    // Launch the poop
+    // Sync physics body position with visual mesh position before launch
+    const poopBody = this.physics.getBody(this.currentPoop.id);
+    if (poopBody) {
+      poopBody.body.position.set(
+        this.currentPoop.mesh.position.x,
+        this.currentPoop.mesh.position.y,
+        this.currentPoop.mesh.position.z
+      );
+    }
+    
+    // Launch the poop from its current pulled-back position
     this.physics.launchPoop(this.currentPoop.id, data.velocity);
     
     gameState.player.ammo--;
@@ -444,10 +476,14 @@ export class Game {
 
   private onMonkeyHit(data: any): void {
     const monkey = this.monkeys.get(data.monkeyId);
-    if (!monkey) return;
+    const physicsBody = this.physics.getBody(data.monkeyId);
+    if (!monkey || !physicsBody) return;
+    
+    // Wake up the monkey and nearby objects
+    this.physics.wakeNearby(physicsBody.body.position, 3);
     
     // Check if hit was hard enough to "kill"
-    if (data.force > 5) {
+    if (data.force > 8) {
       this.scene.remove(monkey);
       this.physics.removeBody(data.monkeyId);
       this.monkeys.delete(data.monkeyId);
@@ -466,13 +502,21 @@ export class Game {
     const physicsBody = this.physics.getBody(data.blockId);
     if (!physicsBody || physicsBody.health === undefined) return;
     
-    // Reduce health based on impact
-    const damage = Math.ceil(data.force / 5);
-    physicsBody.health -= damage;
+    // Wake up this block and nearby objects
+    this.physics.wakeNearby(physicsBody.body.position, 3);
+    
+    // Only reduce health on significant impacts
+    if (data.force > 3) {
+      const damage = Math.ceil(data.force / 8);
+      physicsBody.health -= damage;
+    }
     
     if (physicsBody.health <= 0) {
       const mesh = this.blocks.get(data.blockId);
       if (mesh) {
+        // Wake nearby before removing
+        this.physics.wakeNearby(physicsBody.body.position, 4);
+        
         this.scene.remove(mesh);
         this.physics.removeBody(data.blockId);
         this.blocks.delete(data.blockId);

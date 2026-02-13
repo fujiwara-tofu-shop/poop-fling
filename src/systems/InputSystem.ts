@@ -77,8 +77,10 @@ export class InputSystem {
     this.currentPos.set(x, y);
 
     const launchData = this.calculateLaunchData();
+    const pullX = this.startPos.x - this.currentPos.x;
+    const pullY = this.startPos.y - this.currentPos.y;
 
-    eventBus.emit(Events.AIM_UPDATE, launchData);
+    eventBus.emit(Events.AIM_UPDATE, { ...launchData, pullX, pullY });
   }
 
   private handlePointerUp(): void {

@@ -67,15 +67,15 @@ export const MONKEY = {
 export const BLOCKS = {
   WOOD: {
     COLOR: 0xDEB887,
-    HEALTH: 2,
+    HEALTH: 5,
   },
   STONE: {
     COLOR: 0x808080,
-    HEALTH: 4,
+    HEALTH: 10,
   },
   GLASS: {
     COLOR: 0xADD8E6,
-    HEALTH: 1,
+    HEALTH: 2,
   },
 } as const;
 
